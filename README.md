@@ -19,13 +19,13 @@ Suba todos os arquivos no GitHub e faça redeploy na Railway.
 
 ## Configuração Google gravada
 
-Client ID:
+GOOGLE_CALENDAR_CLIENT_ID:
 
 ```text
 786355285772-0hujrij5hpadrddjq9konaci7825ljr8.apps.googleusercontent.com
 ```
 
-Origem Railway:
+GOOGLE_AUTHORIZED_ORIGINS:
 
 ```text
 https://sistema-integrado-crm-production.up.railway.app
