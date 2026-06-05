@@ -225,6 +225,23 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
   .draft-note-item{border:1px solid var(--line);border-radius:14px;background:#f8fafc;padding:12px}
   .draft-note-item strong{display:block;margin-bottom:4px}
 
+
+  .credit-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+  .credit-tab{border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 16px;font-weight:900;cursor:pointer;color:#475569}
+  .credit-tab.active{background:#ef3f0a;color:#fff;border-color:#ef3f0a;box-shadow:0 8px 18px rgba(239,63,10,.16)}
+  .credit-config-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:16px;align-items:start}
+  .rule-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px;margin-bottom:10px}
+  .rule-card h4{margin:0 0 6px;font-size:15px}
+  .rule-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .rule-pill{border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:900;padding:5px 9px}
+  .rule-pill.ok{background:#dcfce7;color:#166534}
+  .rule-pill.warn{background:#fef3c7;color:#92400e}
+  .rule-pill.bad{background:#fee2e2;color:#991b1b}
+  .rule-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .auto-decision-box{border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:14px;padding:12px;margin:10px 0}
+  .credit-simulator{border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc;padding:14px;margin-top:14px}
+  @media(max-width:1000px){.credit-config-grid{grid-template-columns:1fr}}
+
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -251,7 +268,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
     {id:'admin',label:'Administração',icon:'⚙',roles:['admin','gerencia']},
     {id:'relatorios',label:'Relatórios',icon:'◷',roles:['admin','gerencia','bko']},
   ];
-  let ui={module:'crm',range:'mes',funnelId:1,adminTab:'usuarios',search:'',creditStatus:'todos',customStart:'',customEnd:'',dashFunnel:'todos',dashUser:'todos',dashProduct:'todos',dashStatus:'todos',dashTab:'geral',agendaDate:new Date().toISOString().slice(0,10),agendaUser:'me'};
+  let ui={module:'crm',range:'mes',funnelId:1,adminTab:'usuarios',search:'',creditStatus:'todos',creditTab:'solicitacoes',customStart:'',customEnd:'',dashFunnel:'todos',dashUser:'todos',dashProduct:'todos',dashStatus:'todos',dashTab:'geral',agendaDate:new Date().toISOString().slice(0,10),agendaUser:'me'};
 
   function now(){return new Date().toISOString()}
   function daysAgo(n,h=9){const d=new Date();d.setDate(d.getDate()-n);d.setHours(h,20,0,0);return d.toISOString()}
@@ -1005,13 +1022,19 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
       {id:3,userId:2,title:'Análises pendentes BKO',type:'Tarefa',start:daysAgo(0,9),end:daysAgo(0,11),location:'Backoffice',description:'Revisar solicitações de crédito em aberto.',source:'local',status:'Pendente'}
     ];
     const googleCalendarConfig={};
-    return {users,funnels,stages,origins,products,plans,tags,outcomeReasons,opportunities,analysisRequests,calendarEvents,googleCalendarConfig,counters:{user:8,funnel:6,stage:31,origin:7,product:15,plan:55,tag:5,outcome:7,opp:4,analysis:3,calendar:3}};
+    const creditRules=[
+      {id:1,name:'Aprovação automática - score alto',minScore:700,maxScore:1000,decision:'Aprovado',riskLevel:'Baixo',maxRestrictions:0,allowProtest:false,condition:'Cliente aprovado automaticamente conforme score e ausência de restrições.',active:true,sortOrder:1},
+      {id:2,name:'Pré-aprovado - score médio sem protesto',minScore:550,maxScore:699,decision:'Pré-aprovado',riskLevel:'Médio',maxRestrictions:1,allowProtest:false,condition:'Pré-aprovado. Validar documentação e condição comercial antes de liberar.',active:true,sortOrder:2},
+      {id:3,name:'Análise manual - score médio com restrições',minScore:400,maxScore:549,decision:'Análise manual',riskLevel:'Médio',maxRestrictions:2,allowProtest:false,condition:'Encaminhar para análise BKO/gerência com justificativa.',active:true,sortOrder:3},
+      {id:4,name:'Reprovação automática - score baixo ou protesto',minScore:0,maxScore:399,decision:'Reprovado',riskLevel:'Alto',maxRestrictions:99,allowProtest:false,condition:'Reprovado por score baixo. Se houver exceção, solicitar avaliação gerencial.',active:true,sortOrder:4}
+    ];
+    return {users,funnels,stages,origins,products,plans,tags,outcomeReasons,creditRules,opportunities,analysisRequests,calendarEvents,googleCalendarConfig,counters:{user:8,funnel:6,stage:31,origin:7,product:15,plan:55,tag:5,outcome:7,opp:4,analysis:3,calendar:3,creditRule:4}};
   }
   function migrateState(st){
     const base=seed();
     if(!st||typeof st!=='object')return base;
     let changed=false;
-    ['users','funnels','stages','origins','products','plans','tags','outcomeReasons','opportunities','analysisRequests','calendarEvents'].forEach(k=>{
+    ['users','funnels','stages','origins','products','plans','tags','outcomeReasons','creditRules','opportunities','analysisRequests','calendarEvents'].forEach(k=>{
       if(!Array.isArray(st[k])){st[k]=base[k]||[];changed=true;}
     });
     st.counters=Object.assign({},base.counters,st.counters||{});if(!st.googleCalendarConfig||typeof st.googleCalendarConfig!=='object')st.googleCalendarConfig=base.googleCalendarConfig||{};if(!st.googleCalendarApp||typeof st.googleCalendarApp!=='object')st.googleCalendarApp={calendarId:'primary',syncMode:'Ler eventos'};
@@ -1022,7 +1045,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
       });
     }
     function nextIdFor(key){
-      const map={users:'user',funnels:'funnel',stages:'stage',origins:'origin',products:'product',plans:'plan',tags:'tag',outcomeReasons:'outcome',opportunities:'opp',analysisRequests:'analysis',calendarEvents:'calendar'};
+      const map={users:'user',funnels:'funnel',stages:'stage',origins:'origin',products:'product',plans:'plan',tags:'tag',outcomeReasons:'outcome',opportunities:'opp',analysisRequests:'analysis',calendarEvents:'calendar',creditRules:'creditRule'};
       const ck=map[key]||key;
       const max=Math.max(0,...(st[key]||[]).map(x=>Number(x.id)||0),Number(st.counters[ck]||0));
       st.counters[ck]=max+1;
@@ -1057,7 +1080,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
     });
     st.analysisRequests.forEach(r=>{if(!Array.isArray(r.history))r.history=[];if(!r.status)r.status='Enviado';if(!r.createdAt)r.createdAt=new Date().toISOString();if(!r.updatedAt)r.updatedAt=r.createdAt});
     st.calendarEvents.forEach(ev=>{if(!ev.id){st.counters.calendar=(st.counters.calendar||0)+1;ev.id=st.counters.calendar;}if(!ev.type)ev.type='Compromisso';if(!ev.status)ev.status='Confirmado';if(!ev.source)ev.source='local';if(!ev.createdAt)ev.createdAt=ev.start||new Date().toISOString();});
-    ['user','funnel','stage','origin','product','plan','tag','outcome','opp','analysis','calendar'].forEach(k=>{if(!Number.isFinite(Number(st.counters[k])))st.counters[k]=base.counters[k]||0});
+    ['user','funnel','stage','origin','product','plan','tag','outcome','opp','analysis','calendar','creditRule'].forEach(k=>{if(!Number.isFinite(Number(st.counters[k])))st.counters[k]=base.counters[k]||0});
     st.counters.user=Math.max(st.counters.user,...st.users.map(x=>Number(x.id)||0));
     st.counters.funnel=Math.max(st.counters.funnel,...st.funnels.map(x=>Number(x.id)||0));
     st.counters.stage=Math.max(st.counters.stage,...st.stages.map(x=>Number(x.id)||0));
@@ -1069,6 +1092,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
     st.counters.opp=Math.max(st.counters.opp,...st.opportunities.map(x=>Number(x.id)||0));
     st.counters.analysis=Math.max(st.counters.analysis,...st.analysisRequests.map(x=>Number(x.id)||0));
     st.counters.calendar=Math.max(st.counters.calendar||0,...(st.calendarEvents||[]).map(x=>Number(x.id)||0));
+    st.counters.creditRule=Math.max(st.counters.creditRule||0,...(st.creditRules||[]).map(x=>Number(x.id)||0));
     if(changed)localStorage.setItem(STORAGE_KEY,JSON.stringify(st));
     return st;
   }
@@ -1229,10 +1253,86 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
   function renderStage(st,user,stage,opps){const sum=opps.reduce((a,o)=>a+num(o.monthlyValue),0);const first=getFirstStage(st,stage.funnelId);const canCreateHere=first&&Number(first.id)===Number(stage.id);return `<section class="stage" data-stage-id="${stage.id}"><div class="stage-head"><div><h3>${esc(stage.name)}</h3><small>${money(sum)} / mês</small></div><div class="stage-actions"><span class="count-dot">${opps.length}</span>${canCreateHere?`<button class="plus-mini" title="Adicionar oportunidade somente na etapa inicial" data-action="newOpp" data-stage="${stage.id}">+</button>`:''}</div></div><div class="dropzone" data-drop-stage="${stage.id}">${opps.length?opps.map(o=>renderOppCard(st,o)).join(''):'<div class="empty-stage">Sem oportunidades</div>'}</div></section>`}
   function renderOppCard(st,o){const tags=(o.tagIds||[]).map(id=>st.tags.find(t=>t.id===id)).filter(Boolean);const analysis=getOppAnalysis(st,o);return `<article class="opp-card" draggable="true" data-opp-id="${o.id}" data-action="openOpp"><div class="card-top"><h4>${esc(o.clientName)}</h4><span class="status-pill status-${o.status}">${o.status==='won'?'Ganho':o.status==='lost'?'Perda':'Aberto'}</span></div><div class="client">${esc(o.clientPhone||'Sem telefone')}</div><div class="doc mono">${esc(o.clientCpf||'Sem documento')}</div><div class="tags">${tags.slice(0,3).map(t=>`<span class="tag ${esc(t.color||'orange')}">${esc(t.name)}</span>`).join('')}${analysis?`<span class="tag ${analysis.status.includes('Aprov')?'green':analysis.status.includes('Reprov')?'red':'orange'}">${esc(analysis.status)}</span>`:''}${o.isBackofficeCopy?'<span class="tag blue">Backoffice</span>':''}</div><div class="value">${money(o.monthlyValue)}</div></article>`}
 
-  function renderCredit(user){const st=getState();let reqs=visibleAnalysis(st,user);if(ui.creditStatus!=='todos')reqs=reqs.filter(r=>r.status===ui.creditStatus);const pending=reqs.filter(r=>['Enviado','Em análise'].includes(r.status)).length;const approved=reqs.filter(r=>['Aprovado','Liberado por exceção','Liberado com condição'].includes(r.status)).length;const reproved=reqs.filter(r=>['Reprovado','Reprovação mantida'].includes(r.status)).length;return `<div class="subbar"><div><h1>Análise Cadastral CPF/CNPJ</h1><p>Fluxo integrado vendedor → BKO → gerência, com anexo da consulta e histórico.</p></div><button class="btn btn-primary" data-action="newAnalysis">+ Nova Solicitação</button></div>
-    <div class="grid four"><div class="mini-metric"><small>Total</small><strong>${reqs.length}</strong></div><div class="mini-metric"><small>Em análise</small><strong>${pending}</strong></div><div class="mini-metric"><small>Aprovadas</small><strong>${approved}</strong></div><div class="mini-metric"><small>Reprovadas</small><strong>${reproved}</strong></div></div>
-    <div class="toolbar mt14"><div class="filters"><select class="select" data-action="filterCredit"><option value="todos">Todos os status</option>${['Enviado','Em análise','Aprovado','Reprovado','Contestação enviada','Em análise gerencial','Liberado por exceção','Liberado com condição','Reprovação mantida'].map(s=>`<option ${ui.creditStatus===s?'selected':''}>${s}</option>`).join('')}</select></div><button class="btn btn-light" data-action="exportCredit">Exportar CSV</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Protocolo</th><th>Cliente</th><th>Documento</th><th>Vendedor</th><th>Produto</th><th>Status</th><th>Score</th><th>Risco</th><th>Atualizado</th></tr></thead><tbody>${reqs.length?reqs.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).map(r=>`<tr class="clickable" data-action="openAnalysis" data-id="${r.id}"><td class="mono">${esc(r.protocol)}</td><td><strong>${esc(r.clientName)}</strong><br><span class="small">${esc(r.city||'-')}</span></td><td class="mono">${esc(r.cpf)}</td><td>${esc(r.sellerName||userName(st,r.requestedByUserId))}</td><td>${esc(r.product||'-')}</td><td>${analysisStatusBadge(r.status)}</td><td>${r.bko?.score??'-'}</td><td>${riskBadge(r.bko?.riskLevel)}</td><td>${fmtDate(r.updatedAt)}</td></tr>`).join(''):`<tr><td colspan="9"><div class="empty">Nenhuma solicitação encontrada.</div></td></tr>`}</tbody></table></div>`}
+
+  function decisionClass(decision=''){
+    const d=normName(decision);
+    if(d.includes('APROVADO')&&!d.includes('PRE'))return 'ok';
+    if(d.includes('PRE')||d.includes('MANUAL'))return 'warn';
+    if(d.includes('REPROVADO'))return 'bad';
+    return '';
+  }
+  function renderCreditDecisionBadge(decision=''){
+    return `<span class="rule-pill ${decisionClass(decision)}">${esc(decision||'Sem decisão')}</span>`;
+  }
+  function evaluateCreditRules(st,scoreRaw,restrictionsRaw=0,hasProtest=false){
+    const score=Number(scoreRaw||0);
+    const restrictions=Number(restrictionsRaw||0);
+    const rules=(st.creditRules||[]).filter(r=>r.active!==false).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    const protest=hasProtest===true||String(hasProtest).toLowerCase()==='sim'||String(hasProtest).toLowerCase()==='true';
+    for(const r of rules){
+      const min=Number(r.minScore||0),max=Number(r.maxScore||1000),maxRest=Number(r.maxRestrictions||0);
+      if(score>=min&&score<=max&&restrictions<=maxRest&&(!protest||r.allowProtest===true)){
+        return {matched:true,rule:r,decision:r.decision,riskLevel:r.riskLevel,condition:r.condition||''};
+      }
+    }
+    return {matched:false,rule:null,decision:'Análise manual',riskLevel:'Alto',condition:'Nenhuma regra automática compatível. Encaminhar para análise manual.'};
+  }
+  function renderCreditRulesList(st){
+    const rules=(st.creditRules||[]).slice().sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    if(!rules.length)return '<div class="empty">Nenhuma regra cadastrada.</div>';
+    return rules.map(r=>`<div class="rule-card">
+      <h4>${esc(r.name)}</h4>
+      <div class="small">Score ${Number(r.minScore||0)} até ${Number(r.maxScore||0)} • Até ${Number(r.maxRestrictions||0)} restrição(ões) • Protesto: ${r.allowProtest?'permite':'não permite'}</div>
+      <div class="rule-meta">${renderCreditDecisionBadge(r.decision)}<span class="rule-pill">Risco ${esc(r.riskLevel||'-')}</span><span class="rule-pill">${r.active!==false?'Ativa':'Inativa'}</span></div>
+      ${r.condition?`<p class="small mt10">${esc(r.condition)}</p>`:''}
+      <div class="rule-actions"><button class="btn btn-light btn-sm" data-action="editCreditRule" data-id="${r.id}">Editar</button><button class="btn btn-red btn-sm" data-action="deleteCreditRule" data-id="${r.id}">Excluir</button></div>
+    </div>`).join('');
+  }
+  function creditRuleFormHtml(rule={}){
+    return `<form id="creditRuleForm" data-id="${rule.id||''}">
+      <div class="field"><label>Nome da regra</label><input name="name" value="${esc(rule.name||'')}" placeholder="Ex: Aprovação score alto"></div>
+      <div class="form-row four">
+        <div class="field"><label>Score mínimo</label><input name="minScore" type="number" min="0" max="1000" value="${rule.minScore??0}"></div>
+        <div class="field"><label>Score máximo</label><input name="maxScore" type="number" min="0" max="1000" value="${rule.maxScore??1000}"></div>
+        <div class="field"><label>Máx. restrições</label><input name="maxRestrictions" type="number" min="0" value="${rule.maxRestrictions??0}"></div>
+        <div class="field"><label>Ordem</label><input name="sortOrder" type="number" min="1" value="${rule.sortOrder??1}"></div>
+      </div>
+      <div class="form-row four">
+        <div class="field"><label>Decisão</label><select name="decision"><option ${rule.decision==='Aprovado'?'selected':''}>Aprovado</option><option ${rule.decision==='Pré-aprovado'?'selected':''}>Pré-aprovado</option><option ${rule.decision==='Análise manual'?'selected':''}>Análise manual</option><option ${rule.decision==='Reprovado'?'selected':''}>Reprovado</option></select></div>
+        <div class="field"><label>Risco</label><select name="riskLevel"><option ${rule.riskLevel==='Baixo'?'selected':''}>Baixo</option><option ${rule.riskLevel==='Médio'?'selected':''}>Médio</option><option ${rule.riskLevel==='Alto'?'selected':''}>Alto</option></select></div>
+        <div class="field"><label>Permite protesto?</label><select name="allowProtest"><option value="false" ${!rule.allowProtest?'selected':''}>Não</option><option value="true" ${rule.allowProtest?'selected':''}>Sim</option></select></div>
+        <div class="field"><label>Status</label><select name="active"><option value="true" ${rule.active!==false?'selected':''}>Ativa</option><option value="false" ${rule.active===false?'selected':''}>Inativa</option></select></div>
+      </div>
+      <div class="field"><label>Condição / parecer automático</label><textarea name="condition" placeholder="Informe a orientação para o vendedor/BKO quando esta regra for aplicada.">${esc(rule.condition||'')}</textarea></div>
+      <div class="footer-actions"><button type="button" class="btn btn-light" data-action="clearCreditRuleForm">Limpar</button><button class="btn btn-primary" type="submit">${rule.id?'Salvar regra':'Cadastrar regra'}</button></div>
+    </form>`;
+  }
+  function renderCreditRulesConfig(user){
+    const st=getState();
+    if(!['admin','gerencia'].includes(user.role))return '<div class="card"><h3>Acesso restrito</h3><p>Somente admin/gerência pode configurar regras de crédito.</p></div>';
+    return `<div class="credit-config-grid">
+      <div class="card"><h3>Cadastro de regra de análise</h3>${creditRuleFormHtml({})}
+        <div class="credit-simulator"><h3>Simular parecer</h3><div class="form-row three"><div class="field"><label>Score</label><input id="simScore" type="number" value="650"></div><div class="field"><label>Restrições</label><input id="simRestrictions" type="number" value="0"></div><div class="field"><label>Protesto</label><select id="simProtest"><option value="false">Não</option><option value="true">Sim</option></select></div></div><button class="btn btn-light" data-action="simulateCreditRule">Simular</button><div id="simCreditResult" class="auto-decision-box hidden"></div></div>
+      </div>
+      <div class="card"><h3>Regras cadastradas</h3><p class="small">As regras são avaliadas pela ordem. A primeira regra compatível com score, restrições e protesto gera o parecer automático.</p>${renderCreditRulesList(st)}</div>
+    </div>`;
+  }
+
+  function renderCredit(user){
+    const st=getState();
+    let reqs=visibleAnalysis(st,user);
+    if(ui.creditStatus!=='todos')reqs=reqs.filter(r=>r.status===ui.creditStatus);
+    const pending=reqs.filter(r=>['Enviado','Em análise'].includes(r.status)).length;
+    const approved=reqs.filter(r=>['Aprovado','Liberado por exceção','Liberado com condição','Pré-aprovado'].includes(r.status)).length;
+    const reproved=reqs.filter(r=>['Reprovado','Reprovação mantida'].includes(r.status)).length;
+    if(!ui.creditTab)ui.creditTab='solicitacoes';
+    const canConfig=['admin','gerencia'].includes(user.role);
+    const tabs=`<div class="credit-tabs"><button class="credit-tab ${ui.creditTab==='solicitacoes'?'active':''}" data-action="creditTab" data-tab="solicitacoes">Solicitações</button>${canConfig?`<button class="credit-tab ${ui.creditTab==='config'?'active':''}" data-action="creditTab" data-tab="config">Configuração de análise</button>`:''}</div>`;
+    const solicitacoes=`<div class="grid four"><div class="mini-metric"><small>Total</small><strong>${reqs.length}</strong></div><div class="mini-metric"><small>Em análise</small><strong>${pending}</strong></div><div class="mini-metric"><small>Aprovadas</small><strong>${approved}</strong></div><div class="mini-metric"><small>Reprovadas</small><strong>${reproved}</strong></div></div>
+    <div class="toolbar mt14"><div class="filters"><select class="select" data-action="filterCredit"><option value="todos">Todos os status</option>${['Enviado','Em análise','Aprovado','Pré-aprovado','Reprovado','Contestação enviada','Em análise gerencial','Liberado por exceção','Liberado com condição','Reprovação mantida'].map(s=>`<option ${ui.creditStatus===s?'selected':''}>${s}</option>`).join('')}</select></div><button class="btn btn-light" data-action="exportCredit">Exportar CSV</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Protocolo</th><th>Cliente</th><th>Documento</th><th>Vendedor</th><th>Produto</th><th>Status</th><th>Score</th><th>Risco</th><th>Atualizado</th></tr></thead><tbody>${reqs.length?reqs.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).map(r=>`<tr class="clickable" data-action="openAnalysis" data-id="${r.id}"><td class="mono">${esc(r.protocol)}</td><td><strong>${esc(r.clientName)}</strong><br><span class="small">${esc(r.city||'-')}</span></td><td class="mono">${esc(r.cpf)}</td><td>${esc(r.sellerName||userName(st,r.requestedByUserId))}</td><td>${esc(r.product||'-')}</td><td>${analysisStatusBadge(r.status)}</td><td>${r.bko?.score??'-'}</td><td>${riskBadge(r.bko?.riskLevel)}</td><td>${fmtDate(r.updatedAt)}</td></tr>`).join(''):`<tr><td colspan="9"><div class="empty">Nenhuma solicitação encontrada.</div></td></tr>`}</tbody></table></div>`;
+    return `<div class="subbar"><div><h1>Análise Cadastral CPF/CNPJ</h1><p>Fluxo integrado vendedor → BKO → gerência, com regras automáticas de aprovação, pré-aprovação e reprovação.</p></div><button class="btn btn-primary" data-action="newAnalysis">+ Nova Solicitação</button></div>${tabs}${ui.creditTab==='config'&&canConfig?renderCreditRulesConfig(user):solicitacoes}`;
+  }
 
   function renderAdmin(user){const tabs=[['usuarios','Usuários'],['funis','Funis e Etapas'],['origens','Origens'],['planos','Categorias e Produtos'],['tags','Tags'],['motivos','Motivos Ganho/Perda']];return `<div class="subbar"><div><h1>Administração</h1><p>Cadastros básicos do sistema integrado. <span class="small">Alterações são salvas automaticamente neste navegador.</span></p></div><button class="btn btn-light" data-action="resetData">Restaurar dados de demonstração</button></div><div class="tabs">${tabs.map(t=>`<button class="tab ${ui.adminTab===t[0]?'active':''}" data-admin-tab="${t[0]}">${t[1]}</button>`).join('')}</div><div class="mt14">${adminTabContent()}</div>`}
   function adminTabContent(){const st=getState();if(ui.adminTab==='usuarios')return adminUsers(st);if(ui.adminTab==='funis')return adminFunnels(st);if(ui.adminTab==='origens')return adminOrigins(st);if(ui.adminTab==='planos')return adminPlans(st);if(ui.adminTab==='tags')return adminTags(st);if(ui.adminTab==='motivos')return adminOutcomes(st);return ''}
@@ -2112,7 +2212,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
   }
 
   function analysisModal(req){const st=getState();const user=getUser();const canAnalyze=['bko','admin'].includes(user.role);const canManage=['gerencia','admin'].includes(user.role);const canContest=user.role==='vendedor'&&req.status==='Reprovado';openModal(`<div class="modal"><div class="modal-head"><h2>${esc(req.protocol)} • ${esc(req.clientName)}</h2><button class="x" data-action="closeModal">×</button></div><div class="modal-body"><div class="grid two"><div class="card"><h3>Dados da Solicitação</h3><div class="info-grid"><div class="info-item"><span>Status</span><strong>${analysisStatusBadge(req.status)}</strong></div><div class="info-item"><span>Documento</span><strong class="mono">${esc(req.cpf)}</strong></div><div class="info-item"><span>Vendedor</span><strong>${esc(req.sellerName||userName(st,req.requestedByUserId))}</strong></div><div class="info-item"><span>Produto</span><strong>${esc(req.product||'-')}</strong></div><div class="info-item"><span>Telefone</span><strong>${esc(req.clientPhone||'-')}</strong></div><div class="info-item"><span>Cidade</span><strong>${esc(req.city||'-')}</strong></div></div>${req.reusedFromProtocol?`<div class="filebox mt10">Base reutilizada automaticamente do protocolo <strong>${esc(req.reusedFromProtocol)}</strong> por estar dentro dos últimos 30 dias.</div>`:''}<hr><p class="small">${esc(req.sellerNote||'Sem observação do vendedor.')}</p></div><div class="card"><h3>Resultado BKO</h3>${req.bko?`<div class="info-grid"><div class="info-item"><span>Decisão</span><strong>${analysisStatusBadge(req.bko.decision)}</strong></div><div class="info-item"><span>Score</span><strong>${req.bko.score??'-'}</strong></div><div class="info-item"><span>Risco</span><strong>${riskBadge(req.bko.riskLevel)}</strong></div><div class="info-item"><span>Anexo</span><strong>${esc(req.bko.attachmentName||'Não anexado')}</strong></div></div><div class="score-line mt10"><div style="width:${Math.min(100,Math.max(0,(Number(req.bko.score||0)/1000)*100))}%"></div></div><p class="small mt10">${esc(req.bko.justification||'')}</p>`:'<div class="empty">Ainda sem análise BKO.</div>'}</div></div>
-    ${canAnalyze?`<div class="card mt14"><h3>Análise BKO</h3><form id="analysisForm" data-id="${req.id}"><div class="form-row four"><div class="field"><label>Decisão</label><select name="decision"><option>Aprovado</option><option>Reprovado</option></select></div><div class="field"><label>Score</label><input name="score" type="number" min="0" max="1000" value="${req.bko?.score||''}"></div><div class="field"><label>Motivo reprovação</label><input name="reason" value="${esc(req.bko?.reason||'')}"></div><div class="field"><label>Anexar documento consultado</label><input name="attachment" type="file" accept=".pdf,image/*"></div></div><div class="field"><label>Observação / Justificativa</label><textarea name="justification">${esc(req.bko?.justification||'')}</textarea></div><button class="btn btn-primary" type="submit">Salvar análise</button></form></div>`:''}
+    ${canAnalyze?`<div class="card mt14"><h3>Análise BKO</h3><form id="analysisForm" data-id="${req.id}"><div class="form-row four"><div class="field"><label>Decisão</label><select name="decision"><option>Aprovado</option><option>Pré-aprovado</option><option>Análise manual</option><option>Reprovado</option></select></div><div class="field"><label>Score</label><input name="score" type="number" min="0" max="1000" value="${req.bko?.score||''}"></div><div class="field"><label>Restrições encontradas</label><input name="restrictions" type="number" min="0" value="${req.bko?.restrictions??0}"></div><div class="field"><label>Possui protesto?</label><select name="hasProtest"><option value="false" ${!req.bko?.hasProtest?'selected':''}>Não</option><option value="true" ${req.bko?.hasProtest?'selected':''}>Sim</option></select></div></div><div class="form-row"><div class="field"><label>Motivo reprovação / observação</label><input name="reason" value="${esc(req.bko?.reason||'')}"></div><div class="field"><label>Anexar documento consultado</label><input name="attachment" type="file" accept=".pdf,image/*"></div></div><div class="auto-decision-box"><strong>Parecer automático:</strong> ao informar score, restrições e protesto, o sistema aplicará a configuração cadastrada e sugerirá a decisão.</div><div class="field"><label>Observação / Justificativa</label><textarea name="justification">${esc(req.bko?.justification||'')}</textarea></div><button class="btn btn-primary" type="submit">Salvar análise</button></form></div>`:''}
     ${canContest?`<div class="card mt14"><h3>Contestação do vendedor</h3><form id="contestForm" data-id="${req.id}"><div class="field"><label>Justificativa</label><textarea name="reason" required placeholder="Explique por que a venda deve ser reavaliada."></textarea></div><button class="btn btn-warn" type="submit">Enviar contestação</button></form></div>`:''}
     ${canManage&&['Contestação enviada','Em análise gerencial'].includes(req.status)?`<div class="card mt14"><h3>Decisão Gerencial</h3><form id="decisionForm" data-id="${req.id}"><div class="field"><label>Decisão</label><select name="decision"><option>Liberado por exceção</option><option>Liberado com condição</option><option>Reprovação mantida</option></select></div><div class="field"><label>Condição / Observação</label><textarea name="note"></textarea></div><button class="btn btn-primary" type="submit">Registrar decisão</button></form></div>`:''}
     <div class="card mt14"><h3>Histórico</h3><div class="history">${(req.history||[]).map(h=>`<div class="history-item"><strong>${esc(h.action)}</strong><small>${esc(h.actor||'Sistema')} • ${fmtDate(h.at)} ${h.status?'• '+esc(h.status):''}</small></div>`).join('')}</div></div></div></div>`)}
@@ -2164,6 +2264,11 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
     if(action==='openOpp'){try{const st=getState();const card=act.closest('[data-opp-id]');const opp=st.opportunities.find(o=>o.id===Number(card?.dataset.oppId));if(opp)oppModal(opp);else toast('Oportunidade não encontrada para edição.','error');}catch(err){console.error(err);toast('Não foi possível editar a oportunidade: '+(err?.message||err),'error')}return}
     if(action==='closeModal'){closeModal();return}
     if(action==='clearSearch'){ui.search='';render();return}
+    if(action==='creditTab'){ui.creditTab=act.dataset.tab||'solicitacoes';render();return}
+    if(action==='editCreditRule'){editCreditRule(Number(act.dataset.id));return}
+    if(action==='deleteCreditRule'){deleteCreditRule(Number(act.dataset.id));return}
+    if(action==='clearCreditRuleForm'){render();return}
+    if(action==='simulateCreditRule'){simulateCreditRule();return}
     if(action==='newAnalysis'){newAnalysisModal();return}
     if(action==='openAnalysis'){const st=getState();const req=st.analysisRequests.find(r=>r.id===Number(act.dataset.id));if(req)analysisModal(req);return}
     if(action==='editUser'){adminUserModal(Number(act.dataset.id));return}
@@ -2225,13 +2330,13 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
   document.addEventListener('dragover',e=>{const dz=e.target.closest('[data-drop-stage]');if(dz){e.preventDefault();dz.classList.add('dragover')}});
   document.addEventListener('dragleave',e=>{const dz=e.target.closest('[data-drop-stage]');if(dz)dz.classList.remove('dragover')});
   document.addEventListener('drop',e=>{const dz=e.target.closest('[data-drop-stage]');if(!dz)return;e.preventDefault();dz.classList.remove('dragover');const id=Number(e.dataTransfer.getData('text/plain'));const st=getState();const opp=st.opportunities.find(o=>o.id===id);if(opp){const u=getUser();const targetStage=Number(dz.dataset.dropStage);const targetFunnel=st.stages.find(s=>s.id===targetStage)?.funnelId||opp.funnelId;if(!hasFunnelAccess(st,u,targetFunnel)){toast('Você não tem acesso ao funil de destino.','error');return;}const wonStage=getWonStage(st,targetFunnel);if(wonStage&&Number(targetStage)===Number(wonStage.id)){toast('Para levar a oportunidade para GANHO, abra a oportunidade e use o botão Marcar Ganho. O sistema validará todos os campos obrigatórios.','warn');return;}const moveCheck=validateOpportunityMove(st,opp,targetStage);if(!moveCheck.ok){toast(moveCheck.message,'error');return;}opp.stageId=targetStage;opp.funnelId=targetFunnel;opp.updatedAt=now();opp.history=opp.history||[];opp.history.push({at:now(),actor:u.name,action:'Movida para etapa '+stageName(st,opp.stageId)});setState(st);render();toast('Oportunidade movida.')}});
-  document.addEventListener('submit',async e=>{e.preventDefault();try{const id=e.target.id;if(id==='loginForm')submitLogin(e.target);if(id==='oppForm')await submitOpp(e.target);if(id==='creditForm')submitCredit(e.target);if(id==='analysisForm')submitBkoAnalysis(e.target);if(id==='contestForm')submitContest(e.target);if(id==='decisionForm')submitDecision(e.target);if(id==='outcomeForm')submitOutcome(e.target);if(id==='adminUserForm')adminCreateUser(e.target);if(id==='adminEditUserForm')adminUpdateUser(e.target);if(id==='adminFunnelForm')adminCreateFunnel(e.target);if(id==='adminEditFunnelForm')adminUpdateFunnel(e.target);if(id==='adminStageForm')adminCreateStage(e.target);if(id==='adminEditStageForm')adminUpdateStage(e.target);if(id==='adminOriginForm')adminCreateOrigin(e.target);if(id==='adminEditOriginForm')adminUpdateOrigin(e.target);if(id==='adminCategoryForm')adminCreateProductCategory(e.target);if(id==='adminEditCategoryForm')adminUpdateCategory(e.target);if(id==='adminPlanForm')adminCreatePlan(e.target);if(id==='adminEditPlanForm')adminUpdatePlan(e.target);if(id==='adminTagForm')adminCreateTag(e.target);if(id==='adminEditTagForm')adminUpdateTag(e.target);if(id==='adminOutcomeForm')adminCreateOutcome(e.target);if(id==='adminEditOutcomeForm')adminUpdateOutcomeReason(e.target);if(id==='agendaEventForm')submitAgendaEvent(e.target);if(id==='googleAgendaForm')submitGoogleAgenda(e.target)}catch(err){console.error(err);toast('Não foi possível salvar. Detalhe técnico: '+(err?.message||err),'error')}});
+  document.addEventListener('submit',async e=>{e.preventDefault();try{const id=e.target.id;if(id==='loginForm')submitLogin(e.target);if(id==='oppForm')await submitOpp(e.target);if(id==='creditForm')submitCredit(e.target);if(id==='analysisForm')submitBkoAnalysis(e.target);if(id==='creditRuleForm')submitCreditRule(e.target);if(id==='contestForm')submitContest(e.target);if(id==='decisionForm')submitDecision(e.target);if(id==='outcomeForm')submitOutcome(e.target);if(id==='adminUserForm')adminCreateUser(e.target);if(id==='adminEditUserForm')adminUpdateUser(e.target);if(id==='adminFunnelForm')adminCreateFunnel(e.target);if(id==='adminEditFunnelForm')adminUpdateFunnel(e.target);if(id==='adminStageForm')adminCreateStage(e.target);if(id==='adminEditStageForm')adminUpdateStage(e.target);if(id==='adminOriginForm')adminCreateOrigin(e.target);if(id==='adminEditOriginForm')adminUpdateOrigin(e.target);if(id==='adminCategoryForm')adminCreateProductCategory(e.target);if(id==='adminEditCategoryForm')adminUpdateCategory(e.target);if(id==='adminPlanForm')adminCreatePlan(e.target);if(id==='adminEditPlanForm')adminUpdatePlan(e.target);if(id==='adminTagForm')adminCreateTag(e.target);if(id==='adminEditTagForm')adminUpdateTag(e.target);if(id==='adminOutcomeForm')adminCreateOutcome(e.target);if(id==='adminEditOutcomeForm')adminUpdateOutcomeReason(e.target);if(id==='agendaEventForm')submitAgendaEvent(e.target);if(id==='googleAgendaForm')submitGoogleAgenda(e.target)}catch(err){console.error(err);toast('Não foi possível salvar. Detalhe técnico: '+(err?.message||err),'error')}});
 
   function fd(form){return Object.fromEntries(new FormData(form).entries())}
   function fdAll(form,name){return [...new FormData(form).getAll(name)].map(Number).filter(Boolean)}
   function focusAndWarn(form,selector,msg){const el=form.querySelector(selector);if(el){el.focus({preventScroll:false});el.scrollIntoView({behavior:'smooth',block:'center'});}toast(msg,'error');return false}
   
-  function isApprovedCreditStatus(status){return ['Aprovado','Liberado por exceção','Liberado com condição'].includes(String(status||''))}
+  function isApprovedCreditStatus(status){return ['Aprovado','Pré-aprovado','Liberado por exceção','Liberado com condição'].includes(String(status||''))}
   function isCreditRejectedStatus(status){return ['Reprovado','Reprovação mantida'].includes(String(status||''))}
   function creditApprovedForOpp(st,opp){const a=getOppAnalysis(st,opp);return !!(a&&isApprovedCreditStatus(a.status))}
   function creditStatusForOpp(st,opp){const a=getOppAnalysis(st,opp);return a?.status||'Sem análise'}
@@ -2587,7 +2692,49 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
     if(opp){opp.history=opp.history||[];opp.history.push({at:now(),actor:'Sistema',action:req.reusedFromProtocol?`Análise de crédito vinculada com reaproveitamento do protocolo ${req.reusedFromProtocol}.`:'Análise de crédito vinculada ao CPF/CNPJ da oportunidade.'});opp.updatedAt=now();}
     setState(st);closeModal();render();
   } 
-  function submitBkoAnalysis(form){const st=getState();const user=getUser();const data=fd(form);const r=st.analysisRequests.find(x=>x.id===Number(form.dataset.id));if(!r)return;const file=form.querySelector('input[type=file]')?.files?.[0];const score=Number(data.score||0);r.bko={analystId:user.id,analystName:user.name,decision:data.decision,score,riskLevel:riskByScore(score),reason:data.reason,justification:data.justification,source:'Consulta manual',attachmentName:file?.name||r.bko?.attachmentName||'',analyzedAt:now()};r.status=data.decision;r.updatedAt=now();r.history.push({at:now(),actor:user.name,action:'Análise BKO registrada: '+data.decision+'.',status:r.status});const opp=st.opportunities.find(o=>o.id===r.opportunityId)||st.opportunities.find(o=>digits(o.clientCpf)===digits(r.cpf));if(opp){r.opportunityId=opp.id;opp.updatedAt=now();opp.history=opp.history||[];opp.history.push({at:now(),actor:user.name,action:'Resultado da análise de crédito: '+data.decision+'.'});if(isApprovedCreditStatus(data.decision))moveOppToCreditReleasedStage(st,opp,user.name);}setState(st);closeModal();render();toast(isApprovedCreditStatus(data.decision)?'Análise aprovada e CRM atualizado automaticamente.':'Análise salva e CRM atualizado.')} 
+
+  function submitCreditRule(form){
+    const st=getState();const data=fd(form);const id=Number(form.dataset.id||0);
+    const values={name:data.name||'Regra sem nome',minScore:Number(data.minScore||0),maxScore:Number(data.maxScore||1000),maxRestrictions:Number(data.maxRestrictions||0),sortOrder:Number(data.sortOrder||1),decision:data.decision,riskLevel:data.riskLevel,allowProtest:String(data.allowProtest)==='true',active:String(data.active)==='true',condition:data.condition||''};
+    if(id){const r=(st.creditRules||[]).find(x=>Number(x.id)===id);if(r)Object.assign(r,values);}
+    else{st.counters.creditRule=(st.counters.creditRule||0)+1;(st.creditRules=st.creditRules||[]).push({id:st.counters.creditRule,...values});}
+    setState(st);render();toast(id?'Regra de crédito atualizada.':'Regra de crédito cadastrada.');
+  }
+  function editCreditRule(id){
+    const st=getState();const r=(st.creditRules||[]).find(x=>Number(x.id)===Number(id));if(!r)return;
+    const wrap=document.querySelector('.credit-config-grid .card');if(wrap){wrap.innerHTML='<h3>Editar regra de análise</h3>'+creditRuleFormHtml(r);}
+  }
+  function deleteCreditRule(id){
+    const st=getState();st.creditRules=(st.creditRules||[]).filter(r=>Number(r.id)!==Number(id));setState(st);render();toast('Regra de crédito excluída.');
+  }
+  function simulateCreditRule(){
+    const st=getState();const score=document.getElementById('simScore')?.value||0;const rest=document.getElementById('simRestrictions')?.value||0;const protest=document.getElementById('simProtest')?.value==='true';
+    const result=evaluateCreditRules(st,score,rest,protest);
+    const box=document.getElementById('simCreditResult');if(box){box.classList.remove('hidden');box.innerHTML=`<strong>Resultado:</strong> ${renderCreditDecisionBadge(result.decision)} <span class="rule-pill">Risco ${esc(result.riskLevel)}</span><br><small>${result.rule?'Regra aplicada: '+esc(result.rule.name):'Nenhuma regra específica aplicada.'}</small><p class="small mb0">${esc(result.condition||'')}</p>`;}
+  }
+
+  function submitBkoAnalysis(form){
+    const st=getState();const user=getUser();const data=fd(form);
+    const r=st.analysisRequests.find(x=>x.id===Number(form.dataset.id));if(!r)return;
+    const file=form.querySelector('input[type=file]')?.files?.[0];
+    const score=Number(data.score||0);
+    const restrictions=Number(data.restrictions||0);
+    const hasProtest=String(data.hasProtest)==='true';
+    const auto=evaluateCreditRules(st,score,restrictions,hasProtest);
+    const finalDecision=data.decision&&data.decision!=='Análise manual'?data.decision:auto.decision;
+    const finalRisk=auto.riskLevel||riskByScore(score);
+    const justification=(data.justification||auto.condition||'').trim();
+
+    r.bko={analystId:user.id,analystName:user.name,decision:finalDecision,score,riskLevel:finalRisk,restrictions,hasProtest,autoRuleId:auto.rule?.id||null,autoRuleName:auto.rule?.name||'',reason:data.reason,justification,source:'Consulta manual + regra automática',attachmentName:file?.name||r.bko?.attachmentName||'',analyzedAt:now()};
+    r.status=finalDecision;
+    r.updatedAt=now();
+    r.history.push({at:now(),actor:user.name,action:'Análise BKO registrada: '+finalDecision+(auto.rule?' • Regra: '+auto.rule.name:'')+'.',status:r.status});
+
+    const opp=st.opportunities.find(o=>o.id===r.opportunityId)||st.opportunities.find(o=>digits(o.clientCpf)===digits(r.cpf));
+    if(opp){r.opportunityId=opp.id;opp.updatedAt=now();opp.history=opp.history||[];opp.history.push({at:now(),actor:user.name,action:'Resultado da análise de crédito: '+finalDecision+'.'});if(isApprovedCreditStatus(finalDecision)||finalDecision==='Pré-aprovado')moveOppToCreditReleasedStage(st,opp,user.name);}
+    setState(st);closeModal();render();
+    toast(isApprovedCreditStatus(finalDecision)||finalDecision==='Pré-aprovado'?'Análise registrada e CRM atualizado automaticamente.':'Análise salva e CRM atualizado.');
+  } 
   function submitContest(form){const st=getState();const user=getUser();const r=st.analysisRequests.find(x=>x.id===Number(form.dataset.id));if(!r)return;const data=fd(form);r.contestation={userId:user.id,userName:user.name,reason:data.reason,createdAt:now()};r.status='Contestação enviada';r.updatedAt=now();r.history.push({at:now(),actor:user.name,action:'Contestação enviada para gerência.',status:r.status});setState(st);closeModal();render();toast('Contestação enviada.','warn')}
   function submitDecision(form){const st=getState();const user=getUser();const r=st.analysisRequests.find(x=>x.id===Number(form.dataset.id));if(!r)return;const data=fd(form);r.managementDecision={managerId:user.id,managerName:user.name,decision:data.decision,note:data.note,createdAt:now()};r.status=data.decision;r.updatedAt=now();r.history.push({at:now(),actor:user.name,action:'Decisão gerencial: '+data.decision+'.',status:r.status});const opp=st.opportunities.find(o=>Number(o.id)===Number(r.opportunityId))||st.opportunities.find(o=>digits(o.clientCpf)===digits(r.cpf));if(opp&&isApprovedCreditStatus(data.decision)){r.opportunityId=opp.id;moveOppToCreditReleasedStage(st,opp,user.name);}setState(st);closeModal();render();toast(isApprovedCreditStatus(data.decision)?'Decisão liberada e oportunidade movida automaticamente.':'Decisão registrada.')} 
   function stagesForFunnel(st,funnelId){return (st.stages||[]).filter(s=>Number(s.funnelId)===Number(funnelId)).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0))}
@@ -2765,6 +2912,6 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}.nowrap{white-space:n
 
 <!-- v28: termo de portabilidade visível nos documentos de telefonia fixa -->
 
-<!-- v46: Google Calendar gravado diretamente nos arquivos, sem depender de env Railway -->
+<!-- v47: Configuração de regras de análise cadastral/credito -->
 </body>
 </html>
